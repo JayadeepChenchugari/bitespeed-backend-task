@@ -32,38 +32,56 @@ exports.reconcileContact = async ({ email, phoneNumber }) => {
   let primaryContact;
 
   if (matchedContacts.length === 0) {
+    // No matches, create new primary
     primaryContact = await this.createPrimaryContact({ email, phoneNumber });
   } else {
+    // Determine oldest primary contact
     primaryContact = matchedContacts.find(c => c.linkPrecedence === 'primary') || matchedContacts[0];
 
+    // Convert any extra primaries to secondary
     for (const contact of matchedContacts) {
       if (contact.linkPrecedence === 'primary' && contact.id !== primaryContact.id) {
         await prisma.contact.update({
           where: { id: contact.id },
-          data: { linkPrecedence: 'secondary', linkedId: primaryContact.id }
+          data: {
+            linkPrecedence: 'secondary',
+            linkedId: primaryContact.id
+          }
         });
       }
     }
 
-    const alreadyExists = matchedContacts.some(
+    // Check if the exact combo exists
+    const exactMatch = matchedContacts.find(
       c => c.email === email && c.phoneNumber === phoneNumber
     );
 
-    if (!alreadyExists) {
+    const emailExists = matchedContacts.some(c => c.email === email);
+    const phoneExists = matchedContacts.some(c => c.phoneNumber === phoneNumber);
+
+    // If not an exact match and either value is new, create secondary
+    if (!exactMatch && (!emailExists || !phoneExists)) {
       await prisma.contact.create({
         data: {
           email,
           phoneNumber,
           linkPrecedence: 'secondary',
-          linkedId: primaryContact.id,
-        },
+          linkedId: primaryContact.id
+        }
       });
     }
   }
 
+  // Fetch all related contacts for final response
   const allLinkedContacts = await prisma.contact.findMany({
     where: {
-      OR: [{ id: primaryContact.id }, { linkedId: primaryContact.id }]
+      OR: [
+        { id: primaryContact.id },
+        { linkedId: primaryContact.id }
+      ]
+    },
+    orderBy: {
+      createdAt: 'asc'
     }
   });
 
