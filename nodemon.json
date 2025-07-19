@@ -1,0 +1,6 @@
+{
+  "watch": ["index.js", ".env", "prisma/schema.prisma"],
+  "ext": "js,json,env,prisma",
+  "ignore": ["node_modules"],
+  "exec": "node index.js"
+}
