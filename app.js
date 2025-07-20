@@ -7,4 +7,4 @@ app.use(express.json());
 
 app.use('/', contactRoutes);
 
-module.exports = App;
+module.exports = app;
