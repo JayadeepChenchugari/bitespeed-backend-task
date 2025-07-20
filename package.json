@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
+    "postinstall": "prisma generate",
     "start": "node index.js",
     "dev": "nodemon"
   },
