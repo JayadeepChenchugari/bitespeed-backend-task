@@ -4,31 +4,41 @@ exports.healthCheck = async (req, res) => {
   try {
     const filters = req.query;
     const contacts = await contactService.getFilteredContacts(filters);
-    res.json(contacts);
+    return res.status(200).json(contacts);
   } catch (error) {
-    console.error('DB Error:', error);
-    res.status(500).json({ error: 'Could not connect to DB' });
+    console.error('[HealthCheck] DB Error:', error.message || error);
+    return res.status(500).json({ error: 'Database connection failed' });
   }
 };
 
 exports.createContact = async (req, res) => {
   try {
     const data = req.body;
+
+    if (!data.email && !data.phoneNumber) {
+      return res.status(400).json({ error: 'Email or phoneNumber is required' });
+    }
+
     const contact = await contactService.createPrimaryContact(data);
-    res.status(201).json({ message: 'Contact created', contact });
+    return res.status(201).json({ message: 'Contact created successfully', contact });
   } catch (error) {
-    console.error('Error creating contact:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('[CreateContact] Error:', error.message || error);
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
 exports.identifyContact = async (req, res) => {
   try {
     const data = req.body;
+
+    if (!data.email && !data.phoneNumber) {
+      return res.status(400).json({ error: 'Email or phoneNumber is required' });
+    }
+
     const result = await contactService.reconcileContact(data);
-    res.status(200).json(result);
+    return res.status(200).json(result);
   } catch (error) {
-    console.error('Error in /identify:', error);
-    res.status(500).json({ error: 'Something went wrong' });
+    console.error('[IdentifyContact] Error:', error.message || error);
+    return res.status(500).json({ error: 'Something went wrong' });
   }
 };

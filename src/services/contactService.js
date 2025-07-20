@@ -21,12 +21,13 @@ exports.reconcileContact = async ({ email, phoneNumber }) => {
 
   const matchedContacts = await prisma.contact.findMany({
     where: {
+      deletedAt: null,
       OR: [
         email ? { email } : undefined,
         phoneNumber ? { phoneNumber } : undefined,
       ].filter(Boolean),
     },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: 'asc' }
   });
 
   let primaryContact;
@@ -35,10 +36,10 @@ exports.reconcileContact = async ({ email, phoneNumber }) => {
     // No matches, create new primary
     primaryContact = await this.createPrimaryContact({ email, phoneNumber });
   } else {
-    // Determine oldest primary contact
+    // Determine primary
     primaryContact = matchedContacts.find(c => c.linkPrecedence === 'primary') || matchedContacts[0];
 
-    // Convert any extra primaries to secondary
+    // Update others to secondary
     for (const contact of matchedContacts) {
       if (contact.linkPrecedence === 'primary' && contact.id !== primaryContact.id) {
         await prisma.contact.update({
@@ -51,7 +52,6 @@ exports.reconcileContact = async ({ email, phoneNumber }) => {
       }
     }
 
-    // Check if the exact combo exists
     const exactMatch = matchedContacts.find(
       c => c.email === email && c.phoneNumber === phoneNumber
     );
@@ -59,7 +59,7 @@ exports.reconcileContact = async ({ email, phoneNumber }) => {
     const emailExists = matchedContacts.some(c => c.email === email);
     const phoneExists = matchedContacts.some(c => c.phoneNumber === phoneNumber);
 
-    // If not an exact match and either value is new, create secondary
+    // Only create a new secondary if it's not already present
     if (!exactMatch && (!emailExists || !phoneExists)) {
       await prisma.contact.create({
         data: {
@@ -72,17 +72,21 @@ exports.reconcileContact = async ({ email, phoneNumber }) => {
     }
   }
 
-  // Fetch all related contacts for final response
+  // Re-fetch all linked contacts
+    // Always determine the primary again in case of changes
+  const truePrimaryId = primaryContact.linkPrecedence === 'primary'
+    ? primaryContact.id
+    : primaryContact.linkedId;
+
   const allLinkedContacts = await prisma.contact.findMany({
     where: {
+      deletedAt: null,
       OR: [
-        { id: primaryContact.id },
-        { linkedId: primaryContact.id }
+        { id: truePrimaryId },
+        { linkedId: truePrimaryId }
       ]
     },
-    orderBy: {
-      createdAt: 'asc'
-    }
+    orderBy: { createdAt: 'asc' }
   });
 
   const emails = [...new Set(allLinkedContacts.map(c => c.email).filter(Boolean))];
@@ -93,7 +97,7 @@ exports.reconcileContact = async ({ email, phoneNumber }) => {
 
   return {
     contact: {
-      primaryContactId: primaryContact.id,
+      primaryContactId: truePrimaryId,
       emails,
       phoneNumbers,
       secondaryContactIds,
