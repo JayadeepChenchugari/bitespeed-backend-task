@@ -20,6 +20,6 @@ describe('POST /identify', () => {
       .send({}); // no email or phoneNumber
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: 'Email or phoneNumber is required' });
+    expect(res.body).toEqual({ error: 'Email or phoneNumber is needed' });
   });
 });
