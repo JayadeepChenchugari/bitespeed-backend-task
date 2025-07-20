@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-  "test": "jest",
-  "postinstall": "prisma generate",
-  "start": "node index.js",
-  "dev": "nodemon",
-  "build": "prisma generate"
-},
+    "test": "jest",
+    "postinstall": "prisma generate",
+    "start": "node index.js",
+    "dev": "nodemon",
+    "build": "prisma generate"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
